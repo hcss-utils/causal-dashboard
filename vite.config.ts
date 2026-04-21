@@ -3,5 +3,5 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/causal-dashboard/',
+  base: '/russian_redlines-causal-dashboard/',
 })

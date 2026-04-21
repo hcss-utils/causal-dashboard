@@ -6,6 +6,7 @@ import CausalNetwork from './components/CausalNetwork';
 import CorrelationHeatmap from './components/CorrelationHeatmap';
 import CrossDomainOverlay from './components/CrossDomainOverlay';
 import EntityAnalysis from './components/EntityAnalysis';
+import RelatedResources from './components/RelatedResources';
 import './index.css';
 
 const TABS = [
@@ -31,6 +32,8 @@ function App() {
           </p>
         </div>
       </header>
+
+      <RelatedResources />
 
       <nav className="tab-bar">
         {TABS.map(t => (
