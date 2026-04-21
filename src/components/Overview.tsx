@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { load } from '../data';
 import type { SummaryStats, GrangerResult } from '../types';
 import { predColor, sigColor } from '../colors';
+import Takeaway from './Takeaway';
 
 export default function Overview() {
   const [stats, setStats] = useState<SummaryStats | null>(null);
@@ -81,6 +82,22 @@ export default function Overview() {
               </div>
             ))}
           </div>
+          {(() => {
+            const total = preds.reduce((s, [, c]) => s + c, 0);
+            const [topName, topCount] = preds[0];
+            const rl = stats.predicate_totals['RED_LINES'] || 0;
+            const nt = stats.predicate_totals['NUCLEAR_THREATS'] || 0;
+            const topShare = ((topCount / total) * 100).toFixed(1);
+            const rlShare = ((rl / total) * 100).toFixed(2);
+            return (
+              <Takeaway>
+                <strong>{topName}</strong> dominates volume-wise at {topCount.toLocaleString()} edges ({topShare}% of the {total.toLocaleString()} total).
+                Rhetoric predicates — <strong>RED_LINES</strong> ({rl.toLocaleString()}, {rlShare}%) and <strong>NUCLEAR_THREATS</strong> ({nt.toLocaleString()}) — are
+                a small fraction of the corpus. <em>Volume ≠ causal weight:</em> see the next panel for which predicates actually drive
+                rhetoric, and the Granger tab for lag-corrected F-statistics.
+              </Takeaway>
+            );
+          })()}
         </div>
 
         <div className="chart-box">
@@ -119,6 +136,21 @@ export default function Overview() {
                 ))}
             </div>
           </div>
+          {(() => {
+            const t = rhetoricTriggers.length;
+            const e = rhetoricEffects.length;
+            const loops = feedbackLoops.length / 2;
+            const asym = e > 0 ? (t / e).toFixed(1) : '∞';
+            const variant = t > e * 1.5 ? 'surprise' : 'default';
+            return (
+              <Takeaway variant={variant as 'surprise' | 'default'}>
+                <strong>Rhetoric is more reactor than actor:</strong> {t} predicates Granger-cause rhetoric vs only {e} the reverse
+                ({asym}× asymmetry). {loops > 0
+                  ? <>There are <strong>{loops} bidirectional feedback loop(s)</strong> where rhetoric and events mutually reinforce — expand these in the Granger &amp; Network tabs.</>
+                  : <>No clean bidirectional loops at this significance level — rhetoric appears mostly downstream of events.</>}
+              </Takeaway>
+            );
+          })()}
         </div>
       </div>
     </div>

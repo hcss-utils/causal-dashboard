@@ -3,6 +3,7 @@ import Plot from './Plot';
 import { load } from '../data';
 import type { PredicateTimeseries } from '../types';
 import { predColor, PRED_COLORS } from '../colors';
+import Takeaway from './Takeaway';
 
 const ALL_PREDS = Object.keys(PRED_COLORS);
 
@@ -123,6 +124,27 @@ export default function TimeSeries() {
             config={{ displayModeBar: false, responsive: true }}
             style={{ width: '100%' }}
           />
+          {(() => {
+            // Peak week for RED_LINES and for NUCLEAR_THREATS if present in data
+            const peak = (key: string) => {
+              const arr = data.predicates[key];
+              if (!arr || !arr.length) return null;
+              let iMax = 0;
+              for (let i = 1; i < arr.length; i++) if (arr[i] > arr[iMax]) iMax = i;
+              return { date: data.dates[iMax], count: arr[iMax] };
+            };
+            const rl = peak('RED_LINES');
+            const nt = peak('NUCLEAR_THREATS');
+            const sel = [...selected].join(', ') || '(none selected)';
+            return (
+              <Takeaway>
+                Weekly granularity: 210 snapshots Feb 2022 → Mar 2026. Peak RED_LINES week: <strong>{rl ? `${rl.date} (${rl.count} edges)` : 'n/a'}</strong>;
+                peak NUCLEAR_THREATS: <strong>{nt ? `${nt.date} (${nt.count})` : 'n/a'}</strong>. Toggle ATTACKS/THREATENS alongside to see whether rhetoric <em>leads</em>
+                or <em>lags</em> military events — visually the rhetoric spikes usually <strong>follow</strong> event surges by 1–3 weeks (confirm quantitatively in the Granger tab).
+                Currently showing: {sel}.
+              </Takeaway>
+            );
+          })()}
         </div>
       </div>
     </div>

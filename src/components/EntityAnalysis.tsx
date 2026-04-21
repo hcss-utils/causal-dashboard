@@ -3,6 +3,7 @@ import Plot from './Plot';
 import { load } from '../data';
 import type { EntityTimeseries } from '../types';
 import { predColor } from '../colors';
+import Takeaway from './Takeaway';
 
 const ENTITY_COLORS = [
   '#ff7b72', '#ffa657', '#ffd700', '#3fb950', '#58a6ff',
@@ -75,6 +76,20 @@ export default function EntityAnalysis() {
             config={{ displayModeBar: false, responsive: true }}
             style={{ width: '100%' }}
           />
+          {(() => {
+            if (pairs.length === 0) return <Takeaway variant="warning">No entity pairs available for {focusPred}.</Takeaway>;
+            const total = pairs.reduce((s, p) => s + p.total, 0);
+            const top3 = pairs.slice(0, 3).reduce((s, p) => s + p.total, 0);
+            const top3Pct = Math.round((top3 / total) * 100);
+            const top = pairs[0];
+            return (
+              <Takeaway>
+                Most {focusPred.toLowerCase().replace('_', ' ')} rhetoric flows <strong>{top.source_entity} → {top.target_entity}</strong> ({top.total.toLocaleString()} edges).
+                Top-3 pairs account for <strong>{top3Pct}%</strong> of the total {total.toLocaleString()} — rhetoric is concentrated on a small set of source/target dyads,
+                not diffuse. That's useful if you want to know <em>whom</em> Russia is addressing when it issues red-line statements.
+              </Takeaway>
+            );
+          })()}
         </div>
 
         <div className="chart-box">
@@ -101,6 +116,24 @@ export default function EntityAnalysis() {
             config={{ displayModeBar: false, responsive: true }}
             style={{ width: '100%' }}
           />
+          {(() => {
+            if (pairs.length === 0) return null;
+            // Find peak week across the top 6 pairs
+            const top6 = pairs.slice(0, 6);
+            let peak = { i: 0, total: 0 };
+            for (let i = 0; i < data.dates.length; i++) {
+              const tot = top6.reduce((s, p) => s + (p.series[i] || 0), 0);
+              if (tot > peak.total) peak = { i, total: tot };
+            }
+            const peakDate = data.dates[peak.i];
+            return (
+              <Takeaway>
+                Peak week across the top 6 {focusPred.toLowerCase().replace('_', ' ')} pairs: <strong>{peakDate}</strong> ({peak.total} combined edges).
+                Sharp step-changes in individual lines usually correspond to specific diplomatic or military events —
+                e.g. cross-reference the date against the Time Series tab for the matching ATTACKS / THREATENS surge.
+              </Takeaway>
+            );
+          })()}
         </div>
       </div>
     </div>

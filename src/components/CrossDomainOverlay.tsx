@@ -3,6 +3,7 @@ import Plot from './Plot';
 import { load } from '../data';
 import type { PredicateTimeseries, RRLSStatement, NTSStatement } from '../types';
 import { predColor, PRED_COLORS } from '../colors';
+import Takeaway from './Takeaway';
 
 const EVENT_PREDS = ['ATTACKS', 'THREATENS', 'SANCTIONS', 'AIDS', 'TRADES_FOSSIL',
   'CONTROLS', 'LAUNCHES', 'DISPLACES', 'CYBER_ATTACKS', 'DISINFORMS', 'ARMS'];
@@ -268,6 +269,19 @@ export default function CrossDomainOverlay() {
             config={{ displayModeBar: false, responsive: true }}
             style={{ width: '100%' }}
           />
+          {(() => {
+            // Peak event-month and peak RRLS/NTS month
+            const eventPeak = eventByMonth.reduce((acc, r) => r.count > acc.count ? r : acc, { month: '', count: 0 });
+            const rrlsPeak = rrlsByMonth.reduce((acc, r) => r.count > acc.count ? r : acc, { month: '', count: 0, avgConf: 0 });
+            const ntsPeak = ntsByMonth.reduce((acc, r) => r.count > acc.count ? r : acc, { month: '', count: 0, avgConf: 0 });
+            return (
+              <Takeaway>
+                <strong>{eventPred}</strong> totals {totalEvent.toLocaleString()} events (peak {eventPeak.month}: {eventPeak.count.toLocaleString()});
+                RRLS: {totalRRLS} statements (peak {rrlsPeak.month}: {rrlsPeak.count}); NTS: {totalNTS} (peak {ntsPeak.month}: {ntsPeak.count}).
+                Visual test: does the rhetoric bubble cluster align with the event-bar spike, or lag it? If bubbles sit on the <em>right shoulder</em> of an event peak, that's rhetoric <em>reacting</em> to the event — which is what the Granger tab tends to confirm.
+              </Takeaway>
+            );
+          })()}
         </div>
       </div>
     </div>

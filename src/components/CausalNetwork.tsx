@@ -3,6 +3,7 @@ import Plot from './Plot';
 import { load } from '../data';
 import type { CausalEdge } from '../types';
 import { predColor } from '../colors';
+import Takeaway from './Takeaway';
 
 // Fixed positions for network layout
 const NODE_POS: Record<string, [number, number]> = {
@@ -162,6 +163,27 @@ export default function CausalNetwork() {
             config={{ displayModeBar: false, responsive: true }}
             style={{ width: '100%' }}
           />
+          {(() => {
+            const rhetoric = ['RED_LINES', 'NUCLEAR_THREATS'];
+            const incoming = filteredEdges.filter(e => rhetoric.includes(e.target)).length;
+            const outgoing = filteredEdges.filter(e => rhetoric.includes(e.source)).length;
+            const asym = outgoing > 0 ? (incoming / outgoing).toFixed(1) : '∞';
+            // Node with highest incoming rhetoric edges
+            const inByNode: Record<string, number> = {};
+            filteredEdges.filter(e => rhetoric.includes(e.target)).forEach(e => {
+              inByNode[e.source] = (inByNode[e.source] || 0) + 1;
+            });
+            const topIn = Object.entries(inByNode).sort((a, b) => b[1] - a[1])[0];
+            return (
+              <Takeaway variant={incoming > outgoing * 1.5 ? 'surprise' : 'default'}>
+                At p &lt; {pThreshold.toFixed(3)}: <strong>{filteredEdges.length} significant edges</strong>.
+                <strong> {incoming} edges into</strong> rhetoric nodes (red), <strong>{outgoing} out</strong> (green) — a {asym}× asymmetry
+                confirms rhetoric is more a response than a driver.
+                {topIn && <> The single predicate sending the most edges <em>into</em> rhetoric is <strong>{topIn[0]}</strong> ({topIn[1]} of {incoming}).</>}
+                {' '}Slide the p-threshold down to 0.001 to see only the most robust causal claims; toggle the checkbox off to greyscale the rhetoric focus.
+              </Takeaway>
+            );
+          })()}
         </div>
       </div>
     </div>

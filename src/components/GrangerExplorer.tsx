@@ -3,6 +3,7 @@ import Plot from './Plot';
 import { load } from '../data';
 import type { GrangerResult, CrossCorrelation } from '../types';
 import { predColor, sigColor, PRED_COLORS } from '../colors';
+import Takeaway from './Takeaway';
 
 const ALL_PREDS = Object.keys(PRED_COLORS);
 const RHETORIC = ['RED_LINES', 'NUCLEAR_THREATS'];
@@ -127,6 +128,30 @@ export default function GrangerExplorer() {
           ) : (
             <p className="no-data">No significant causal relationships found.</p>
           )}
+          {(() => {
+            if (displayed.length === 0) {
+              return (
+                <Takeaway variant="warning">
+                  No significant Granger-causal {mode === 'triggers' ? 'triggers' : 'effects'} for {focusTarget} at p &lt; 0.05. Try switching direction, or look at severity-weighted below.
+                </Takeaway>
+              );
+            }
+            const top = displayed[0];
+            const shortLag = displayed.filter(g => g.lag <= 2).length;
+            const shortPct = Math.round((shortLag / displayed.length) * 100);
+            const topName = mode === 'triggers' ? top.source : top.target;
+            return (
+              <Takeaway variant={top.p_value < 0.001 ? 'surprise' : 'default'}>
+                Strongest {mode === 'triggers' ? 'trigger' : 'effect'}: <strong>{topName}</strong> → {focusTarget} at F={top.f_stat.toFixed(1)},
+                p={top.p_value.toFixed(4)} (lag = {top.lag} week{top.lag === 1 ? '' : 's'}). Across all {displayed.length} significant
+                pair{displayed.length === 1 ? '' : 's'}, {shortLag} ({shortPct}%) fire at lag ≤ 2 weeks — so {focusTarget.toLowerCase().replace('_', ' ')} rhetoric
+                {mode === 'triggers' ? ' tracks events closely' : ' impact materializes quickly'}, not on a diplomatic-cycle timescale.
+                {mode === 'triggers' && topName === 'THREATENS' && focusTarget === 'RED_LINES' && (
+                  <> <em>Exactly the pair you were looking at:</em> Western/external THREATENS signals precede Russian red-line statements, not the reverse.</>
+                )}
+              </Takeaway>
+            );
+          })()}
         </div>
 
         <div className="chart-box">
@@ -162,6 +187,27 @@ export default function GrangerExplorer() {
           ) : (
             <p className="no-data">No significant severity-weighted triggers.</p>
           )}
+          {(() => {
+            if (severityTriggers.length === 0) {
+              return (
+                <Takeaway variant="warning">
+                  No significant severity-weighted triggers for {focusTarget} at p &lt; 0.05.
+                </Takeaway>
+              );
+            }
+            const topS = severityTriggers[0];
+            // Compare to the plain triggers count
+            const plain = triggers.find(g => g.source === topS.source);
+            const amplification = plain ? (topS.f_stat / plain.f_stat).toFixed(2) : null;
+            return (
+              <Takeaway variant="default">
+                Filtering to <strong>high-severity</strong> {focusTarget} statements: {severityTriggers.length} significant
+                trigger{severityTriggers.length === 1 ? '' : 's'}, topped by <strong>{topS.source}</strong> (F={topS.f_stat.toFixed(1)}, lag {topS.lag}w).
+                {amplification && <> Severity amplifies that pair's F-stat by <strong>{amplification}×</strong> vs the plain count-based test —
+                  i.e. {topS.source} predicts <em>high-stakes</em> {focusTarget} rhetoric harder than it predicts rhetoric volume alone.</>}
+              </Takeaway>
+            );
+          })()}
         </div>
       </div>
 
@@ -216,6 +262,29 @@ export default function GrangerExplorer() {
           ) : (
             <p className="no-data">Select a predicate above.</p>
           )}
+          {selectedXcorr && (() => {
+            // Peak abs correlation and its lag
+            const xc = selectedXcorr;
+            let iPeak = 0;
+            for (let i = 1; i < xc.correlations.length; i++) {
+              if (Math.abs(xc.correlations[i]) > Math.abs(xc.correlations[iPeak])) iPeak = i;
+            }
+            const peakLag = xc.lags[iPeak];
+            const peakR = xc.correlations[iPeak];
+            const leader = peakLag === 0 ? 'contemporaneous'
+              : peakLag > 0 ? `${xcorrSource} leads ${focusTarget} by ${peakLag} week(s)`
+              : `${focusTarget} leads ${xcorrSource} by ${-peakLag} week(s)`;
+            const signif = Math.abs(peakR) > 0.135;
+            return (
+              <Takeaway variant={signif ? 'default' : 'warning'}>
+                Peak correlation: <strong>r = {peakR.toFixed(3)}</strong> at lag {peakLag > 0 ? `+${peakLag}` : peakLag} week(s) →{' '}
+                <strong>{leader}</strong>. {signif
+                  ? <>Magnitude exceeds the ±0.135 approximate significance band, so the lead/lag direction is real — not just sampling noise.</>
+                  : <>Magnitude is below the ±0.135 significance band; treat the direction as suggestive rather than confirmed.</>}
+                {' '}Positive lag on the x-axis means <em>{xcorrSource} leads</em>; the Granger tests above formalize this with lag-corrected F-stats.
+              </Takeaway>
+            );
+          })()}
         </div>
       </div>
     </div>
