@@ -1,28 +1,30 @@
-// Predicate color scheme
+// Predicate color scheme — harmonised to the Standard RuBase Deliverables palette
+// (navy/gold/lightblue family). Rhetoric predicates emphasised: RED_LINES = red,
+// NUCLEAR_THREATS = gold (the house accent), so they stand out as the focus nodes.
 export const PRED_COLORS: Record<string, string> = {
-  ATTACKS: '#ff4444',
-  THREATENS: '#58a6ff',
-  SANCTIONS: '#ffa657',
-  AIDS: '#3fb950',
-  TRADES_FOSSIL: '#f778ba',
-  CONTROLS: '#79c0ff',
-  LAUNCHES: '#d2a8ff',
-  DISPLACES: '#a5d6ff',
-  CYBER_ATTACKS: '#ff9bce',
-  DISINFORMS: '#d2a8ff',
-  ARMS: '#56d364',
-  RED_LINES: '#ff7b72',
-  NUCLEAR_THREATS: '#ffd700',
+  ATTACKS: '#e06666',        // kinetic — red
+  THREATENS: '#82a0bc',      // house lightblue
+  SANCTIONS: '#e8a33d',      // amber
+  AIDS: '#6ab04c',           // western support — green
+  TRADES_FOSSIL: '#c98bb9',  // muted mauve
+  CONTROLS: '#6fa8dc',       // territory — blue
+  LAUNCHES: '#b59ad6',       // violet
+  DISPLACES: '#9fc5e8',      // pale blue
+  CYBER_ATTACKS: '#d99fc4',  // pink
+  DISINFORMS: '#a48fd0',     // purple
+  ARMS: '#76c893',           // teal-green
+  RED_LINES: '#d35f5f',      // rhetoric — red (the "red line")
+  NUCLEAR_THREATS: '#dbad50',// rhetoric — gold (house accent; the nuclear focus)
 };
 
 export function predColor(pred: string): string {
-  return PRED_COLORS[pred] || '#8b949e';
+  return PRED_COLORS[pred] || '#a9abb8';
 }
 
-// Significance colors
+// Significance colors (house tones)
 export function sigColor(p: number): string {
-  if (p < 0.001) return '#ff4444';
-  if (p < 0.01) return '#ffa657';
-  if (p < 0.05) return '#ffd700';
-  return '#8b949e';
+  if (p < 0.001) return '#dbad50'; // gold — most significant
+  if (p < 0.01) return '#e8a33d';  // amber
+  if (p < 0.05) return '#82a0bc';  // lightblue
+  return '#a9abb8';                // muted
 }

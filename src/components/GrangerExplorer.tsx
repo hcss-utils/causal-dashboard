@@ -65,7 +65,7 @@ export default function GrangerExplorer() {
               style={{
                 borderColor: predColor(r),
                 backgroundColor: focusTarget === r ? predColor(r) + '33' : 'transparent',
-                color: focusTarget === r ? predColor(r) : '#8b949e',
+                color: focusTarget === r ? predColor(r) : '#a9abb8',
               }}
               onClick={() => setFocusTarget(r)}
             >
@@ -116,11 +116,11 @@ export default function GrangerExplorer() {
               }]}
               layout={{
                 paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-                font: { color: '#e0e0e0' },
+                font: { color: '#e8edf3' },
                 margin: { t: 10, b: 30, l: 140, r: 180 },
                 height: Math.max(200, displayed.length * 40 + 60),
                 yaxis: { autorange: 'reversed', type: 'category' },
-                xaxis: { title: 'F-statistic', gridcolor: '#21262d' },
+                xaxis: { title: 'F-statistic', gridcolor: '#2a3f63' },
               }}
               config={{ displayModeBar: false, responsive: true }}
               style={{ width: '100%' }}
@@ -175,11 +175,11 @@ export default function GrangerExplorer() {
               }]}
               layout={{
                 paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-                font: { color: '#e0e0e0' },
+                font: { color: '#e8edf3' },
                 margin: { t: 10, b: 30, l: 140, r: 160 },
                 height: Math.max(200, severityTriggers.length * 40 + 60),
                 yaxis: { autorange: 'reversed', type: 'category' },
-                xaxis: { title: 'F-statistic', gridcolor: '#21262d' },
+                xaxis: { title: 'F-statistic', gridcolor: '#2a3f63' },
               }}
               config={{ displayModeBar: false, responsive: true }}
               style={{ width: '100%' }}
@@ -238,18 +238,18 @@ export default function GrangerExplorer() {
               }]}
               layout={{
                 paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-                font: { color: '#e0e0e0' },
+                font: { color: '#e8edf3' },
                 margin: { t: 10, b: 50, l: 60, r: 20 },
                 height: 300,
                 xaxis: {
                   title: `Lag (weeks) — positive = ${xcorrSource} leads`,
-                  gridcolor: '#21262d',
+                  gridcolor: '#2a3f63',
                 },
-                yaxis: { title: 'Correlation', gridcolor: '#21262d' },
+                yaxis: { title: 'Correlation', gridcolor: '#2a3f63' },
                 shapes: [
-                  { type: 'line', x0: -8.5, x1: 8.5, y0: 0, y1: 0, line: { color: '#484f58' } },
-                  { type: 'line', x0: -8.5, x1: 8.5, y0: 0.135, y1: 0.135, line: { color: '#484f58', dash: 'dot' } },
-                  { type: 'line', x0: -8.5, x1: 8.5, y0: -0.135, y1: -0.135, line: { color: '#484f58', dash: 'dot' } },
+                  { type: 'line', x0: -8.5, x1: 8.5, y0: 0, y1: 0, line: { color: '#5a6f8e' } },
+                  { type: 'line', x0: -8.5, x1: 8.5, y0: 0.135, y1: 0.135, line: { color: '#5a6f8e', dash: 'dot' } },
+                  { type: 'line', x0: -8.5, x1: 8.5, y0: -0.135, y1: -0.135, line: { color: '#5a6f8e', dash: 'dot' } },
                 ],
                 annotations: [
                   { x: -6, y: 0.95, xref: 'x', yref: 'paper', text: `← ${focusTarget} leads`, showarrow: false, font: { color: predColor(focusTarget), size: 11 } },

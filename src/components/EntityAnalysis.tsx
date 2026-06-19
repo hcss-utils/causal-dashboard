@@ -6,7 +6,7 @@ import { predColor } from '../colors';
 import Takeaway from './Takeaway';
 
 const ENTITY_COLORS = [
-  '#ff7b72', '#ffa657', '#ffd700', '#3fb950', '#58a6ff',
+  '#ff7b72', '#ffa657', '#dbad50', '#3fb950', '#82a0bc',
   '#d2a8ff', '#f778ba', '#79c0ff', '#a5d6ff', '#56d364',
 ];
 
@@ -36,7 +36,7 @@ export default function EntityAnalysis() {
             style={{
               borderColor: predColor('RED_LINES'),
               backgroundColor: focusPred === 'RED_LINES' ? predColor('RED_LINES') + '33' : 'transparent',
-              color: focusPred === 'RED_LINES' ? predColor('RED_LINES') : '#8b949e',
+              color: focusPred === 'RED_LINES' ? predColor('RED_LINES') : '#a9abb8',
             }}
             onClick={() => setFocusPred('RED_LINES')}
           >RED_LINES</button>
@@ -45,7 +45,7 @@ export default function EntityAnalysis() {
             style={{
               borderColor: predColor('NUCLEAR_THREATS'),
               backgroundColor: focusPred === 'NUCLEAR_THREATS' ? predColor('NUCLEAR_THREATS') + '33' : 'transparent',
-              color: focusPred === 'NUCLEAR_THREATS' ? predColor('NUCLEAR_THREATS') : '#8b949e',
+              color: focusPred === 'NUCLEAR_THREATS' ? predColor('NUCLEAR_THREATS') : '#a9abb8',
             }}
             onClick={() => setFocusPred('NUCLEAR_THREATS')}
           >NUCLEAR_THREATS</button>
@@ -67,11 +67,11 @@ export default function EntityAnalysis() {
             }]}
             layout={{
               paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-              font: { color: '#e0e0e0' },
+              font: { color: '#e8edf3' },
               margin: { t: 10, b: 30, l: 220, r: 60 },
               height: Math.max(250, pairs.length * 35 + 60),
               yaxis: { autorange: 'reversed', type: 'category' },
-              xaxis: { title: 'Total Edges', gridcolor: '#21262d' },
+              xaxis: { title: 'Total Edges', gridcolor: '#2a3f63' },
             }}
             config={{ displayModeBar: false, responsive: true }}
             style={{ width: '100%' }}
@@ -105,11 +105,11 @@ export default function EntityAnalysis() {
             }))}
             layout={{
               paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-              font: { color: '#e0e0e0' },
+              font: { color: '#e8edf3' },
               margin: { t: 10, b: 50, l: 50, r: 20 },
               height: 400,
-              xaxis: { title: 'Week', gridcolor: '#21262d' },
-              yaxis: { title: 'Edge Count', gridcolor: '#21262d' },
+              xaxis: { title: 'Week', gridcolor: '#2a3f63' },
+              yaxis: { title: 'Edge Count', gridcolor: '#2a3f63' },
               legend: { orientation: 'h', y: 1.15, font: { size: 9 } },
               hovermode: 'x unified',
             }}

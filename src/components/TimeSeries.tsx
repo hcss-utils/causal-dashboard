@@ -31,7 +31,7 @@ export default function TimeSeries() {
     const out: Plotly.Data[] = [];
     for (const p of ALL_PREDS) {
       if (!selected.has(p)) continue;
-      let y = data.predicates[p];
+      let y = data.predicates?.[p] ?? (data as unknown as Record<string, number[]>)[p];
       if (!y) continue;
       if (normalize) {
         const mean = y.reduce((s, v) => s + v, 0) / y.length;
@@ -51,7 +51,7 @@ export default function TimeSeries() {
         type: 'scatter', mode: 'lines',
         name: 'RL Severity',
         x: data.dates, y: data.severity_rl,
-        line: { color: '#ff7b72', width: 1, dash: 'dot' },
+        line: { color: '#d35f5f', width: 1, dash: 'dot' },
         yaxis: 'y2',
       } as Plotly.Data);
     }
@@ -60,7 +60,7 @@ export default function TimeSeries() {
         type: 'scatter', mode: 'lines',
         name: 'NT Severity',
         x: data.dates, y: data.severity_nt,
-        line: { color: '#ffd700', width: 1, dash: 'dot' },
+        line: { color: '#dbad50', width: 1, dash: 'dot' },
         yaxis: 'y2',
       } as Plotly.Data);
     }
@@ -83,7 +83,7 @@ export default function TimeSeries() {
               style={{
                 borderColor: predColor(p),
                 backgroundColor: selected.has(p) ? predColor(p) + '33' : 'transparent',
-                color: selected.has(p) ? predColor(p) : '#8b949e',
+                color: selected.has(p) ? predColor(p) : '#a9abb8',
               }}
               onClick={() => toggle(p)}
             >
@@ -112,12 +112,12 @@ export default function TimeSeries() {
             data={traces}
             layout={{
               paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-              font: { color: '#e0e0e0' },
+              font: { color: '#e8edf3' },
               margin: { t: 20, b: 50, l: 60, r: 60 },
               height: 500,
-              xaxis: { title: 'Week', gridcolor: '#21262d' },
-              yaxis: { title: normalize ? 'Z-score' : 'Edge Count', gridcolor: '#21262d' },
-              yaxis2: { title: 'Severity', overlaying: 'y', side: 'right', gridcolor: '#21262d33' },
+              xaxis: { title: 'Week', gridcolor: '#2a3f63' },
+              yaxis: { title: normalize ? 'Z-score' : 'Edge Count', gridcolor: '#2a3f63' },
+              yaxis2: { title: 'Severity', overlaying: 'y', side: 'right', gridcolor: '#2a3f6333' },
               legend: { orientation: 'h', y: 1.12, font: { size: 10 } },
               hovermode: 'x unified',
             }}

@@ -12,6 +12,8 @@ export interface GrangerResult {
   p_value: number;
   lag: number;
   sig: boolean;
+  fdr_sig?: boolean;   // Benjamini-Hochberg FDR (q=0.05) across all 110 tests
+  bonf_sig?: boolean;  // Bonferroni family-wise — the bulletproof set
 }
 
 export interface CrossCorrelation {
@@ -57,6 +59,8 @@ export interface CausalEdge {
   p_value: number;
   lag: number;
   sig: boolean;
+  fdr_sig?: boolean;   // survives Benjamini-Hochberg FDR (q=0.05) across all 110 tests
+  bonf_sig?: boolean;  // survives Bonferroni (family-wise) — the bulletproof set
 }
 
 export interface RRLSStatement {

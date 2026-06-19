@@ -120,7 +120,7 @@ export default function CrossDomainOverlay() {
           y: ntsByMonth.map(r => r.avgConf),
           marker: {
             size: ntsByMonth.map(r => 8 + (r.count / maxCount) * 25),
-            color: '#ffd700',
+            color: '#dbad50',
             opacity: ntsByMonth.map(r => 0.4 + (r.avgConf / 10) * 0.6),
             symbol: 'diamond',
           },
@@ -157,7 +157,7 @@ export default function CrossDomainOverlay() {
           name: 'NUCLEAR_THREATS',
           x: ntsByMonth.map(r => r.month),
           y: ntsByMonth.map(r => r.count),
-          line: { color: '#ffd700', width: 2 },
+          line: { color: '#dbad50', width: 2 },
           marker: { size: 4 },
           yaxis: 'y2',
         } as Plotly.Data);
@@ -191,7 +191,7 @@ export default function CrossDomainOverlay() {
           name: 'NUCLEAR_THREATS',
           x: ntsByMonth.map(r => r.month),
           y: norm(ntsByMonth.map(r => r.count)),
-          line: { color: '#ffd700', width: 2 },
+          line: { color: '#dbad50', width: 2 },
         } as Plotly.Data);
       }
     }
@@ -246,19 +246,19 @@ export default function CrossDomainOverlay() {
             data={traces}
             layout={{
               paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-              font: { color: '#e0e0e0' },
+              font: { color: '#e8edf3' },
               margin: { t: 20, b: 60, l: 70, r: 70 },
               height: 500,
-              xaxis: { title: 'Month', gridcolor: '#21262d', tickangle: -45 },
+              xaxis: { title: 'Month', gridcolor: '#2a3f63', tickangle: -45 },
               yaxis: {
                 title: chartMode === 'normalized' ? 'Z-score' : `${eventPred} Count`,
-                gridcolor: '#21262d',
+                gridcolor: '#2a3f63',
               },
               ...(chartMode !== 'normalized' ? {
                 yaxis2: {
                   title: chartMode === 'bars_bubbles' ? 'Avg Confidence (0-10)' : 'Rhetoric Count',
                   overlaying: 'y', side: 'right',
-                  gridcolor: '#21262d33',
+                  gridcolor: '#2a3f6333',
                   ...(chartMode === 'bars_bubbles' ? { range: [0, 10] } : {}),
                 },
               } : {}),

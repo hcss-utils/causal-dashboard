@@ -15,7 +15,10 @@ export default function Overview() {
 
   if (!stats) return <div className="loading">Loading...</div>;
 
-  const sigGranger = granger.filter(g => g.sig && !g.target.includes('_severity'));
+  // Default to FDR-corrected significance (honest for a 110-pair scan); fall back to raw if flags absent
+  const sigGranger = granger.filter(g => (g.fdr_sig ?? g.sig) && !g.target.includes('_severity'));
+  const bonfCount = granger.filter(g => g.bonf_sig && !g.target.includes('_severity')).length;
+  const rawCount = granger.filter(g => g.sig && !g.target.includes('_severity')).length;
   const rhetoricTriggers = sigGranger.filter(g => g.target === 'RED_LINES' || g.target === 'NUCLEAR_THREATS');
   const rhetoricEffects = sigGranger.filter(g => g.source === 'RED_LINES' || g.source === 'NUCLEAR_THREATS');
   const feedbackLoops = sigGranger.filter(g => {
@@ -44,11 +47,11 @@ export default function Overview() {
           <div className="stat-value">{stats.n_snapshots}</div>
           <div className="stat-label">Weekly Snapshots</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.n_significant_granger}</div>
-          <div className="stat-label">Significant Causal Pairs</div>
+        <div className="stat-card" title={`${bonfCount} survive Bonferroni · ${rawCount} at raw p<0.05 (over-counts ~6 by chance across 110 tests)`}>
+          <div className="stat-value">{sigGranger.length}</div>
+          <div className="stat-label">FDR-Significant Pairs ({bonfCount} bulletproof)</div>
         </div>
-        <div className="stat-card" style={{ borderColor: '#ff7b72' }}>
+        <div className="stat-card" style={{ borderColor: '#d35f5f' }}>
           <div className="stat-value">{rhetoricTriggers.length}</div>
           <div className="stat-label">Rhetoric Triggers</div>
         </div>
@@ -56,7 +59,7 @@ export default function Overview() {
           <div className="stat-value">{rhetoricEffects.length}</div>
           <div className="stat-label">Rhetoric Effects</div>
         </div>
-        <div className="stat-card" style={{ borderColor: '#ffd700' }}>
+        <div className="stat-card" style={{ borderColor: '#dbad50' }}>
           <div className="stat-value">{feedbackLoops.length / 2}</div>
           <div className="stat-label">Feedback Loops</div>
         </div>

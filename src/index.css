@@ -1,19 +1,24 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Standard RuBase Deliverables Dark Theme — AUTHORITATIVE
+   Source: the canonical deliverables app (/mnt/c/Apps/rubase_deliverables/index.html :root)
+   per DASHBOARD_TEMPLATE_GUIDE.md. ALL Red Lines dashboards must comply. */
 :root {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --border: #30363d;
-  --text: #e6edf3;
-  --muted: #8b949e;
-  --accent: #58a6ff;
-  --red: #ff7b72;
-  --green: #3fb950;
-  --yellow: #ffd700;
+  --bg: #0d1f3c;          /* deep navy background */
+  --surface: #1a3761;     /* navy panels / cards / header */
+  --border: #2a3f63;      /* navy border */
+  --text: #e8edf3;
+  --muted: #a9abb8;       /* darkgray */
+  --accent: #dbad50;      /* gold is the house accent */
+  --gold: #dbad50;
+  --lightblue: #82a0bc;
+  --red: #d35f5f;
+  --green: #6ab04c;
+  --yellow: #dbad50;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -216,7 +221,7 @@ body {
 .pred-bar-wrap {
   flex: 1;
   height: 16px;
-  background: #21262d;
+  background: var(--border);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -296,3 +301,38 @@ body {
   .tab-btn { padding: 6px 8px; font-size: 11px; }
   .stat-cards { grid-template-columns: 1fr 1fr; }
 }
+
+/* --- Significance mode toggle + plain-language info modal (RuBase house style) --- */
+.info-btn {
+  background: transparent; border: 1px solid var(--gold); color: var(--gold);
+  border-radius: 6px; padding: 2px 10px; margin-left: 10px; cursor: pointer;
+  font-size: 0.85rem; font-family: inherit; white-space: nowrap;
+}
+.info-btn:hover { background: rgba(219,173,80,.12); }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg-btn {
+  background: var(--surface); color: var(--muted); border: none; padding: 6px 14px;
+  cursor: pointer; font-size: 0.85rem; font-family: inherit; border-right: 1px solid var(--border);
+}
+.seg-btn:last-child { border-right: none; }
+.seg-btn.active { background: var(--gold); color: #0d1f3c; font-weight: 600; }
+.seg-btn:hover:not(.active) { background: #25406a; color: var(--text); }
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(5,12,25,.72); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;
+}
+.modal-card {
+  background: var(--surface); border: 1px solid var(--gold); border-radius: 12px;
+  max-width: 640px; padding: 1.8rem 2rem; position: relative; color: var(--text);
+  box-shadow: 0 10px 40px rgba(0,0,0,.5); max-height: 86vh; overflow-y: auto;
+}
+.modal-card h3 { color: var(--gold); margin-bottom: .8rem; font-size: 1.25rem; }
+.modal-card p { margin: .6rem 0; line-height: 1.55; }
+.modal-list { margin: .6rem 0 .6rem 1.1rem; }
+.modal-list li { margin: .55rem 0; line-height: 1.5; }
+.modal-note { border-top: 1px solid var(--border); padding-top: .8rem; color: var(--muted); font-size: .92rem; }
+.modal-close {
+  position: absolute; top: 10px; right: 14px; background: transparent; border: none;
+  color: var(--muted); font-size: 1.6rem; cursor: pointer; line-height: 1;
+}
+.modal-close:hover { color: var(--gold); }

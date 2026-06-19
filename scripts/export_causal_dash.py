@@ -14,14 +14,16 @@ files = sorted(glob.glob(os.path.join(SNAP_DIR, "snapshot_*.pt")))
 dates = [re.search(r'_(\d{4}-\d{2}-\d{2})_', os.path.basename(f)).group(1) for f in files]
 n = len(next(iter(ts.values()))); dates = dates[:n]
 
-# predicate_timeseries
-pts = {"dates": dates}
-for p in PREDS:
-    k=f"count_{p}"
-    if k in ts: pts[p]=[int(x) for x in ts[k]]
+# predicate_timeseries — NESTED schema {dates, predicates:{...}, severity_rl, severity_nt}
+# (the TimeSeries component requires data.predicates[p] + severity_rl/nt; a flat schema crashes it)
+pts = {"dates": dates,
+       "predicates": {p: [int(x) for x in ts[f"count_{p}"]] for p in PREDS if f"count_{p}" in ts},
+       "severity_rl": [float(x) for x in ts.get("severity_RED_LINES", [0]*n)],
+       "severity_nt": [float(x) for x in ts.get("severity_NUCLEAR_THREATS", [0]*n)]}
 json.dump(pts, open(f"{OUT}/predicate_timeseries.json","w"))
 
-# granger (all pairs) + network (sig)
+# granger (all pairs) + network (sig). 110 pairs are tested, so raw p<0.05 over-claims —
+# tag each edge with Benjamini-Hochberg FDR (q=0.05) + Bonferroni (family-wise) survival.
 granger=[]
 for s in PREDS:
     for t in PREDS:
@@ -33,9 +35,20 @@ for s in PREDS:
         fstat=gc.get("f_stat",gc.get("F",0.0)); pval=gc.get("p_value",1.0)
         lag=gc.get("best_lag",gc.get("lag",1)); sig=bool(pval<0.05)
         granger.append({"source":s,"target":t,"f_stat":round(float(fstat),3),"p_value":round(float(pval),6),"lag":int(lag),"sig":sig})
+# multiple-comparison flags
+m=len(granger); bonf=0.05/m if m else 0.05
+psort=sorted(g["p_value"] for g in granger); bh=0.0
+for k,p in enumerate(psort,1):
+    if p <= (k/m)*0.05: bh=p
+for g in granger:
+    g["bonf_sig"]=bool(g["p_value"]<bonf)
+    g["fdr_sig"]=bool(g["p_value"]<=bh)
 json.dump(granger, open(f"{OUT}/granger_results.json","w"))
 network=[g for g in granger if g["sig"]]
 json.dump(network, open(f"{OUT}/causal_network.json","w"))
+json.dump({"n_tests":m,"bonferroni_threshold":round(bonf,6),"fdr_cutoff":round(bh,4),
+           "n_raw_05":sum(g["sig"] for g in granger),"n_fdr":sum(g["fdr_sig"] for g in granger),
+           "n_bonf":sum(g["bonf_sig"] for g in granger)}, open(f"{OUT}/significance_meta.json","w"), indent=1)
 
 # correlation matrix
 arrs=np.array([np.array(ts[f"count_{p}"],float) for p in PREDS])
