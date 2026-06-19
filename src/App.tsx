@@ -7,6 +7,7 @@ import CorrelationHeatmap from './components/CorrelationHeatmap';
 import CrossDomainOverlay from './components/CrossDomainOverlay';
 import EntityAnalysis from './components/EntityAnalysis';
 import RelatedResources from './components/RelatedResources';
+import RuBaseHeader, { DASH_LOGOS } from './RuBaseHeader';
 import './index.css';
 
 const TABS = [
@@ -24,14 +25,12 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-title">
-          <h1>Causal Analysis Dashboard</h1>
-          <p className="header-subtitle">
-            War Events x Russian Rhetoric — Temporal Knowledge Graph Analysis
-          </p>
-        </div>
-      </header>
+      <RuBaseHeader
+        title="Causal Analysis Dashboard"
+        subtitle="War Events × Russian Rhetoric — Temporal Knowledge Graph"
+        logos={DASH_LOGOS}
+        assetPrefix={import.meta.env.BASE_URL}
+      />
 
       <RelatedResources />
 
