@@ -1,10 +1,11 @@
+import datetime as _dt
 import sys, json, glob, os, re
 import numpy as np
 sys.path.insert(0, "/mnt/g/My Drive/RuBase/Red lines/GNN-pipeline")
 from tkg.run_training import load_snapshots
 from tkg.predict.causal import CausalAnalyzer
 
-SNAP_DIR = "/tmp/tkg_snapshots"
+SNAP_DIR = os.environ.get("SNAP_DIR", "/tmp/tkg_snapshots")
 OUT = "/home/stephan/src/causal-dashboard/public/data"
 snaps = load_snapshots(SNAP_DIR)
 an = CausalAnalyzer()
@@ -72,5 +73,5 @@ json.dump(xc, open(f"{OUT}/cross_correlations.json","w"))
 
 # summary_stats
 totals={p:int(np.sum(ts[f"count_{p}"])) for p in PREDS}
-json.dump({"n_snapshots":len(snaps),"date_start":dates[0],"date_end":dates[-1],"total_triples":sum(totals.values()),"predicate_totals":totals,"n_significant_granger":len(network),"n_predicates":len(PREDS),"confidence_threshold":0.135,"generated":"2026-06-19 DeepState+June"}, open(f"{OUT}/summary_stats.json","w"))
+json.dump({"n_snapshots":len(snaps),"date_start":dates[0],"date_end":dates[-1],"total_triples":sum(totals.values()),"predicate_totals":totals,"n_significant_granger":len(network),"n_predicates":len(PREDS),"confidence_threshold":0.135,"generated": _dt.date.today().isoformat()}, open(f"{OUT}/summary_stats.json","w"))
 print("WROTE to",OUT,"| sig granger:",len(network),"of",len(granger),"| dates",dates[0],"->",dates[-1])
