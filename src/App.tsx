@@ -6,12 +6,14 @@ import CausalNetwork from './components/CausalNetwork';
 import CorrelationHeatmap from './components/CorrelationHeatmap';
 import CrossDomainOverlay from './components/CrossDomainOverlay';
 import EntityAnalysis from './components/EntityAnalysis';
+import StrikeDecoupling from './components/StrikeDecoupling';
 import RelatedResources from './components/RelatedResources';
 import RuBaseHeader, { DASH_LOGOS } from './RuBaseHeader';
 import './index.css';
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
+  { id: 'decoupling', label: 'Strike Decoupling' },
   { id: 'timeseries', label: 'Time Series' },
   { id: 'overlay', label: 'Cross-Domain Overlay' },
   { id: 'granger', label: 'Granger Causality' },
@@ -48,6 +50,7 @@ function App() {
 
       <main>
         {activeTab === 'overview' && <Overview />}
+        {activeTab === 'decoupling' && <StrikeDecoupling />}
         {activeTab === 'timeseries' && <TimeSeries />}
         {activeTab === 'overlay' && <CrossDomainOverlay />}
         {activeTab === 'granger' && <GrangerExplorer />}
