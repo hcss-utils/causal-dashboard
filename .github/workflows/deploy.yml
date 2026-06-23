@@ -4,6 +4,8 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+  schedule:
+    - cron: '20 4 * * *'
 
 permissions:
   contents: write
@@ -13,10 +15,30 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      REDLINES_DB_HOST: ${{ secrets.REDLINES_DB_HOST }}
+      REDLINES_DB_PORT: ${{ secrets.REDLINES_DB_PORT }}
+      REDLINES_DB_NAME: ${{ secrets.REDLINES_DB_NAME }}
+      REDLINES_DB_USER: ${{ secrets.REDLINES_DB_USER }}
+      REDLINES_DB_PASSWORD: ${{ secrets.REDLINES_DB_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Export RRLS/NTS data from redlines DB
+        if: ${{ env.REDLINES_DB_HOST != '' && env.REDLINES_DB_PASSWORD != '' }}
+        run: UV_CACHE_DIR=.uv-cache uv run --with psycopg2-binary python scripts/export_redlines_static.py
+
+      - name: Commit refreshed RRLS/NTS data
+        if: ${{ env.REDLINES_DB_HOST != '' && env.REDLINES_DB_PASSWORD != '' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/rrls_monthly.json public/data/rrls_statements.json public/data/nts_monthly.json public/data/nts_statements.json
+          git diff --cached --quiet || git commit -m "Update redlines data"
+          git push
       - run: npm ci
 
       - name: Build for hcss-utils/causal-dashboard
