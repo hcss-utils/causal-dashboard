@@ -65,6 +65,16 @@ raw['DEATHS_UA']  = ser(TRS, ('forces:UA',))
 raw['DEATHS_CIV'] = ser(TRS, ('civilians:UA',))
 COST = ['DEATHS_RU', 'DEATHS_UA', 'DEATHS_CIV']
 
+# PURIFIED nuclear outcome: only nuclear threats whose subject is a RUSSIAN STATE actor AND not uttered by a
+# non-Russian (the mechanism trace found ~13% of NUCLEAR_THREATS were 3rd parties discussing Russian threats).
+_RU_STATE = ("('actor:MFA_RUS','actor:Vladimir_Putin','actor:State_Duma_RUS','actor:Dmitry_Medvedev',"
+             "'actor:Russian_Embassy_USA','actor:Federation_Council_RUS','actor:MoD_RUS','actor:Maria_Zakharova',"
+             "'actor:Vyacheslav_Volodin','actor:Kremlin_RUS')")
+_NONRU = "zelens|tymoshenko|zaluzh|budanov|kuleba|kyiv|ukrain|nato|biden|american|european|israel|eliyahu"
+raw['NUCLEAR_RU_STATE'] = ser("SELECT date_trunc('week',event_date)::date,count(*) FROM knowledge_graph.triples "
+    f"WHERE predicate='NUCLEAR_THREATS' AND subject_id IN {_RU_STATE} "
+    f"AND COALESCE(attributes->>'source_speaker','') !~* '{_NONRU}' GROUP BY 1")
+
 def stat(a): return np.sign(a) * np.log1p(np.abs(a))
 TARGETS = ['RED_LINES', 'NUCLEAR_THREATS']
 DRIVERS = ['UA_str_russia', 'UA_str_western', 'UA_str_annexed', 'UA_str_energy']
@@ -219,77 +229,77 @@ cost_channel = {
         "DEATHS_UA is real-dated (strongest); DEATHS_RU/CIV are month-distributed -> within-month autocorrelation "
         "can inflate their significance; weight DEATHS_UA most.",
         "Single intensity control + linear VAR; mechanism (why UA cost would move RU rhetoric) is not established."]}
-# ===== TIER-1 rigor on the one surviving link: DEATHS_UA -> NUCLEAR_THREATS =====
+# ===== TIER-1 rigor: run the 4-test battery (DEATHS_UA -> a nuclear target). Run on the impure
+# NUCLEAR_THREATS AND the PURIFIED Russian-state-only outcome, to see whether even the predictive link
+# survives once the outcome actually measures Russian state nuclear signaling. =====
 import itertools
-tier1 = {}
-CV, TG = 'DEATHS_UA', 'NUCLEAR_THREATS'
-d_ua, nuc = sd[CV], sd[TG]
-END = end
-
-# (1) FAVAR-on-deaths: survive the SAME 5-factor full-control FAVAR the strikes passed?
-try:
-    Fz = pca.transform(Z)[:END]
-    fav_d = pd.concat([pd.DataFrame({TG: nuc[:END], CV: d_ua[:END]}).reset_index(drop=True),
-                       pd.DataFrame(Fz, columns=[f'F{i}' for i in range(5)])], axis=1)
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        p_favar = float(VAR(fav_d).fit(maxlags=4, ic='aic').test_causality(TG, [CV], kind='f').pvalue)
-    tier1['favar_full_controls'] = {"p": round(p_favar, 4), "survives": bool(p_favar < 0.05),
-        "note": f"conditional on 5 PCA factors = {evr:.0%} of all {len(CONTROLS)} war-control series (same bar the strike-null cleared)"}
-except Exception as e:
-    tier1['favar_full_controls'] = {"error": str(e)[:80]}
-
-# (2) reverse causality / simultaneity
-p_fwd, p_rev = _gp(nuc, d_ua, 0, END), _gp(d_ua, nuc, 0, END)
-tier1['reverse_causality'] = {"forward_deaths_to_nuclear_p": round(p_fwd, 4), "reverse_nuclear_to_deaths_p": round(p_rev, 4),
-    "simultaneous": bool(p_rev < 0.05),
-    "note": "if reverse is also significant the system is simultaneous and the directional claim weakens"}
-
-# (3) specification curve: lags x trim x intensity-control x period
-CTRLS = {'none': None, 'attacks': intensity, 'ru_launches': stat(raw['RU_launches'])[nz:],
-         'occupies': stat(ser(TR, ('OCCUPIES',)))[nz:]}
-specs = []
-for L, Tr, (cn_, ctrl), (pn, p0s) in itertools.product([2, 3, 4, 6], [2, 4, 6, 8], CTRLS.items(), [('full', 0), ('2023+', sub0)]):
-    e2 = len(wk_dates) - Tr
+def run_tier1(TG):
+    CV = 'DEATHS_UA'; d_ua = sd[CV]; nuc = stat(raw[TG])[nz:]; END = end; t1 = {}
+    # (1) FAVAR full-control
     try:
-        if ctrl is None:
-            gc = grangercausalitytests(np.column_stack([nuc[p0s:e2], d_ua[p0s:e2]]), maxlag=L, verbose=False)
-            pp = min(gc[l][0]['ssr_ftest'][1] for l in gc)
-        else:
-            df3 = pd.DataFrame(np.column_stack([nuc[p0s:e2], d_ua[p0s:e2], ctrl[p0s:e2]]), columns=['T', 'C', 'X'])
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore'); pp = float(VAR(df3).fit(maxlags=L).test_causality('T', ['C'], kind='f').pvalue)
-        specs.append(float(pp))
-    except Exception:
-        pass
-tier1['specification_curve'] = {"n_specs": len(specs), "frac_p_lt_05": round(sum(p < 0.05 for p in specs) / max(len(specs), 1), 3),
-    "median_p": round(float(np.median(specs)), 4) if specs else None,
-    "note": "lags{2,3,4,6} x trim{2,4,6,8} x control{none,attacks,ru_launches,occupies} x period{full,2023+}"}
+        Fz = pca.transform(Z)[:END]
+        fav_d = pd.concat([pd.DataFrame({TG: nuc[:END], CV: d_ua[:END]}).reset_index(drop=True),
+                           pd.DataFrame(Fz, columns=[f'F{i}' for i in range(5)])], axis=1)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            p_f = float(VAR(fav_d).fit(maxlags=4, ic='aic').test_causality(TG, [CV], kind='f').pvalue)
+        t1['favar_full_controls'] = {"p": round(p_f, 4), "survives": bool(p_f < 0.05),
+            "note": f"conditional on 5 PCA factors = {evr:.0%} of all {len(CONTROLS)} war-control series"}
+    except Exception as e:
+        t1['favar_full_controls'] = {"error": str(e)[:80]}
+    # (2) reverse causality
+    p_fwd, p_rev = _gp(nuc, d_ua, 0, END), _gp(d_ua, nuc, 0, END)
+    t1['reverse_causality'] = {"forward_p": round(p_fwd, 4), "reverse_p": round(p_rev, 4), "simultaneous": bool(p_rev < 0.05)}
+    # (3) specification curve
+    CTRLS = {'none': None, 'attacks': intensity, 'ru_launches': stat(raw['RU_launches'])[nz:], 'occupies': stat(ser(TR, ('OCCUPIES',)))[nz:]}
+    specs = []
+    for L, Tr, (cn_, ctrl), (pn, p0s) in itertools.product([2, 3, 4, 6], [2, 4, 6, 8], CTRLS.items(), [('full', 0), ('2023+', sub0)]):
+        e2 = len(wk_dates) - Tr
+        try:
+            if ctrl is None:
+                gc = grangercausalitytests(np.column_stack([nuc[p0s:e2], d_ua[p0s:e2]]), maxlag=L, verbose=False)
+                pp = min(gc[l][0]['ssr_ftest'][1] for l in gc)
+            else:
+                df3 = pd.DataFrame(np.column_stack([nuc[p0s:e2], d_ua[p0s:e2], ctrl[p0s:e2]]), columns=['T', 'C', 'X'])
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore'); pp = float(VAR(df3).fit(maxlags=L).test_causality('T', ['C'], kind='f').pvalue)
+            specs.append(float(pp))
+        except Exception:
+            pass
+    t1['specification_curve'] = {"n_specs": len(specs), "frac_p_lt_05": round(sum(p < 0.05 for p in specs) / max(len(specs), 1), 3),
+        "median_p": round(float(np.median(specs)), 4) if specs else None}
+    # (4) out-of-sample forecast
+    def _oos(use):
+        L = 4; ys = []; pr = []
+        for t in range(len(nuc) // 2, END):
+            rows = [[nuc[s - k] for k in range(1, L + 1)] + ([d_ua[s - k] for k in range(1, L + 1)] if use else []) for s in range(L, t)]
+            Xtr = np.array(rows); ytr = np.array([nuc[s] for s in range(L, t)])
+            beta = np.linalg.lstsq(np.column_stack([np.ones(len(Xtr)), Xtr]), ytr, rcond=None)[0]
+            xt = [nuc[t - k] for k in range(1, L + 1)] + ([d_ua[t - k] for k in range(1, L + 1)] if use else [])
+            pr.append(beta[0] + np.dot(beta[1:], xt)); ys.append(nuc[t])
+        return float(np.sqrt(np.mean((np.array(ys) - np.array(pr)) ** 2)))
+    rb, rd = _oos(False), _oos(True)
+    t1['out_of_sample'] = {"rmse_ar_only": round(rb, 4), "rmse_with_deaths": round(rd, 4),
+        "improvement_pct": round(100 * (rb - rd) / rb, 2), "deaths_help": bool(rd < rb)}
+    passes = [bool(t1['favar_full_controls'].get('survives')), not t1['reverse_causality']['simultaneous'],
+              t1['specification_curve']['frac_p_lt_05'] >= 0.5, t1['out_of_sample']['deaths_help']]
+    t1['hurdles_passed'] = f"{sum(passes)}/4"
+    return t1, sum(passes)
 
-# (4) out-of-sample 1-step forecast of NUCLEAR: AR(4) vs AR(4)+DEATHS_UA(4)
-def _oos(use_deaths):
-    L = 4; ys = []; preds = []
-    for t in range(len(nuc) // 2, END):
-        rows = [[nuc[s - k] for k in range(1, L + 1)] + ([d_ua[s - k] for k in range(1, L + 1)] if use_deaths else []) for s in range(L, t)]
-        targ = [nuc[s] for s in range(L, t)]
-        Xtr = np.array(rows); ytr = np.array(targ)
-        beta = np.linalg.lstsq(np.column_stack([np.ones(len(Xtr)), Xtr]), ytr, rcond=None)[0]
-        xt = [nuc[t - k] for k in range(1, L + 1)] + ([d_ua[t - k] for k in range(1, L + 1)] if use_deaths else [])
-        preds.append(beta[0] + np.dot(beta[1:], xt)); ys.append(nuc[t])
-    return float(np.sqrt(np.mean((np.array(ys) - np.array(preds)) ** 2)))
-r_base, r_d = _oos(False), _oos(True)
-tier1['out_of_sample'] = {"rmse_ar_only": round(r_base, 4), "rmse_with_deaths": round(r_d, 4),
-    "improvement_pct": round(100 * (r_base - r_d) / r_base, 2), "deaths_help": bool(r_d < r_base),
-    "note": "expanding-window 1-step forecast; AR(4) vs AR(4)+DEATHS_UA(4); positive = deaths improve forecast"}
-
-passes = [bool(tier1['favar_full_controls'].get('survives')), not tier1['reverse_causality']['simultaneous'],
-          tier1['specification_curve']['frac_p_lt_05'] >= 0.5, tier1['out_of_sample']['deaths_help']]
-tier1['hurdles_passed'] = f"{sum(passes)}/4"
-tier1['verdict'] = ("Tier-1: " + f"{sum(passes)}/4 hurdles passed "
-    "(FAVAR-full-controls, no-reverse-simultaneity, spec-curve majority-significant, OOS-forecast-gain). "
-    + ("The DEATHS_UA->NUCLEAR link is about as robust as observational time-series allows." if sum(passes) >= 3
-       else "The link is NOT robust to the full Tier-1 battery — treat as confounded/fragile."))
-cost_channel['tier1_DEATHS_UA_to_NUCLEAR'] = tier1
+tier1_impure, n_imp = run_tier1('NUCLEAR_THREATS')
+tier1_pure, n_pur = run_tier1('NUCLEAR_RU_STATE')
+cost_channel['tier1_DEATHS_UA_to_NUCLEAR'] = tier1_impure
+cost_channel['tier1_DEATHS_UA_to_NUCLEAR_PURIFIED'] = tier1_pure
+cost_channel['purification'] = {
+    "outcome": "NUCLEAR_RU_STATE = nuclear threats with a Russian-STATE subject, not uttered by a non-Russian "
+               "(removes the ~13% of NUCLEAR_THREATS the mechanism trace found were 3rd parties discussing Russian threats)",
+    "impure_hurdles": f"{n_imp}/4", "purified_hurdles": f"{n_pur}/4",
+    "verdict": (f"Purified outcome passes {n_pur}/4 (vs {n_imp}/4 impure). "
+                + ("The predictive link SURVIVES purification — it is genuinely about Russian STATE nuclear signaling, "
+                   "not the measurement impurity. (Still deterrence-to-the-West content per the mechanism trace.)"
+                   if n_pur >= 3 else
+                   "The predictive link WEAKENS/FAILS once the outcome actually measures Russian state signaling — "
+                   "much of the original result rode on the impure (3rd-party) statements."))}
 
 event_study["DEATHS_RU"]  = [int(x) for x in raw['DEATHS_RU'][nz:]]
 event_study["DEATHS_UA"]  = [int(x) for x in raw['DEATHS_UA'][nz:]]
