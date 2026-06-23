@@ -219,6 +219,78 @@ cost_channel = {
         "DEATHS_UA is real-dated (strongest); DEATHS_RU/CIV are month-distributed -> within-month autocorrelation "
         "can inflate their significance; weight DEATHS_UA most.",
         "Single intensity control + linear VAR; mechanism (why UA cost would move RU rhetoric) is not established."]}
+# ===== TIER-1 rigor on the one surviving link: DEATHS_UA -> NUCLEAR_THREATS =====
+import itertools
+tier1 = {}
+CV, TG = 'DEATHS_UA', 'NUCLEAR_THREATS'
+d_ua, nuc = sd[CV], sd[TG]
+END = end
+
+# (1) FAVAR-on-deaths: survive the SAME 5-factor full-control FAVAR the strikes passed?
+try:
+    Fz = pca.transform(Z)[:END]
+    fav_d = pd.concat([pd.DataFrame({TG: nuc[:END], CV: d_ua[:END]}).reset_index(drop=True),
+                       pd.DataFrame(Fz, columns=[f'F{i}' for i in range(5)])], axis=1)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        p_favar = float(VAR(fav_d).fit(maxlags=4, ic='aic').test_causality(TG, [CV], kind='f').pvalue)
+    tier1['favar_full_controls'] = {"p": round(p_favar, 4), "survives": bool(p_favar < 0.05),
+        "note": f"conditional on 5 PCA factors = {evr:.0%} of all {len(CONTROLS)} war-control series (same bar the strike-null cleared)"}
+except Exception as e:
+    tier1['favar_full_controls'] = {"error": str(e)[:80]}
+
+# (2) reverse causality / simultaneity
+p_fwd, p_rev = _gp(nuc, d_ua, 0, END), _gp(d_ua, nuc, 0, END)
+tier1['reverse_causality'] = {"forward_deaths_to_nuclear_p": round(p_fwd, 4), "reverse_nuclear_to_deaths_p": round(p_rev, 4),
+    "simultaneous": bool(p_rev < 0.05),
+    "note": "if reverse is also significant the system is simultaneous and the directional claim weakens"}
+
+# (3) specification curve: lags x trim x intensity-control x period
+CTRLS = {'none': None, 'attacks': intensity, 'ru_launches': stat(raw['RU_launches'])[nz:],
+         'occupies': stat(ser(TR, ('OCCUPIES',)))[nz:]}
+specs = []
+for L, Tr, (cn_, ctrl), (pn, p0s) in itertools.product([2, 3, 4, 6], [2, 4, 6, 8], CTRLS.items(), [('full', 0), ('2023+', sub0)]):
+    e2 = len(wk_dates) - Tr
+    try:
+        if ctrl is None:
+            gc = grangercausalitytests(np.column_stack([nuc[p0s:e2], d_ua[p0s:e2]]), maxlag=L, verbose=False)
+            pp = min(gc[l][0]['ssr_ftest'][1] for l in gc)
+        else:
+            df3 = pd.DataFrame(np.column_stack([nuc[p0s:e2], d_ua[p0s:e2], ctrl[p0s:e2]]), columns=['T', 'C', 'X'])
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore'); pp = float(VAR(df3).fit(maxlags=L).test_causality('T', ['C'], kind='f').pvalue)
+        specs.append(float(pp))
+    except Exception:
+        pass
+tier1['specification_curve'] = {"n_specs": len(specs), "frac_p_lt_05": round(sum(p < 0.05 for p in specs) / max(len(specs), 1), 3),
+    "median_p": round(float(np.median(specs)), 4) if specs else None,
+    "note": "lags{2,3,4,6} x trim{2,4,6,8} x control{none,attacks,ru_launches,occupies} x period{full,2023+}"}
+
+# (4) out-of-sample 1-step forecast of NUCLEAR: AR(4) vs AR(4)+DEATHS_UA(4)
+def _oos(use_deaths):
+    L = 4; ys = []; preds = []
+    for t in range(len(nuc) // 2, END):
+        rows = [[nuc[s - k] for k in range(1, L + 1)] + ([d_ua[s - k] for k in range(1, L + 1)] if use_deaths else []) for s in range(L, t)]
+        targ = [nuc[s] for s in range(L, t)]
+        Xtr = np.array(rows); ytr = np.array(targ)
+        beta = np.linalg.lstsq(np.column_stack([np.ones(len(Xtr)), Xtr]), ytr, rcond=None)[0]
+        xt = [nuc[t - k] for k in range(1, L + 1)] + ([d_ua[t - k] for k in range(1, L + 1)] if use_deaths else [])
+        preds.append(beta[0] + np.dot(beta[1:], xt)); ys.append(nuc[t])
+    return float(np.sqrt(np.mean((np.array(ys) - np.array(preds)) ** 2)))
+r_base, r_d = _oos(False), _oos(True)
+tier1['out_of_sample'] = {"rmse_ar_only": round(r_base, 4), "rmse_with_deaths": round(r_d, 4),
+    "improvement_pct": round(100 * (r_base - r_d) / r_base, 2), "deaths_help": bool(r_d < r_base),
+    "note": "expanding-window 1-step forecast; AR(4) vs AR(4)+DEATHS_UA(4); positive = deaths improve forecast"}
+
+passes = [bool(tier1['favar_full_controls'].get('survives')), not tier1['reverse_causality']['simultaneous'],
+          tier1['specification_curve']['frac_p_lt_05'] >= 0.5, tier1['out_of_sample']['deaths_help']]
+tier1['hurdles_passed'] = f"{sum(passes)}/4"
+tier1['verdict'] = ("Tier-1: " + f"{sum(passes)}/4 hurdles passed "
+    "(FAVAR-full-controls, no-reverse-simultaneity, spec-curve majority-significant, OOS-forecast-gain). "
+    + ("The DEATHS_UA->NUCLEAR link is about as robust as observational time-series allows." if sum(passes) >= 3
+       else "The link is NOT robust to the full Tier-1 battery — treat as confounded/fragile."))
+cost_channel['tier1_DEATHS_UA_to_NUCLEAR'] = tier1
+
 event_study["DEATHS_RU"]  = [int(x) for x in raw['DEATHS_RU'][nz:]]
 event_study["DEATHS_UA"]  = [int(x) for x in raw['DEATHS_UA'][nz:]]
 event_study["DEATHS_CIV"] = [int(x) for x in raw['DEATHS_CIV'][nz:]]
