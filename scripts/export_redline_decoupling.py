@@ -154,44 +154,71 @@ battery = [
     {"method": "VARX (+event dummies)", "controls": "endog + exogenous events", "strike_effect": "strikes ns; Nov-2024 SIGNAL event drives nuclear (see varx)"},
 ]
 
-# ---- COST CHANNEL: does HUMAN COST (deaths) drive rhetoric where strike-VOLUME doesn't? ----
-# Self-contained, additive (does NOT touch the validated strike battery above). Casualty series are
-# right-censored (obituary/verification lag), so drop the last TRIM weeks before testing.
+# ---- COST CHANNEL (+ ROBUSTNESS): does HUMAN COST drive rhetoric where strike-VOLUME doesn't, and does
+# it SURVIVE (a) FDR across the 6 tests, (b) conditioning on operational intensity, (c) dropping war-onset 2022?
+# Additive (does NOT touch the strike battery). Casualty series are right-censored -> drop last TRIM weeks.
+import warnings, datetime as _dt
 from statsmodels.tsa.stattools import grangercausalitytests
+from statsmodels.tsa.api import VAR as _VAR
+from statsmodels.stats.multitest import multipletests
 TRIM = 4
 sd = {k: stat(raw[k])[nz:] for k in COST + TARGETS}
 end = len(wk_dates) - TRIM
-cost_tests = {}
+# operational-intensity control (combat tempo, NOT deaths) = weekly ATTACKS volume; the confounder proxy.
+intensity = stat(ser(TR, ('ATTACKS',)))[nz:]
+sub0 = next((i for i, w in enumerate(weeks[nz:]) if w >= _dt.date(2023, 1, 1)), 0)  # 2023+ subperiod start
+
+def _gp(effect, cause, a, b):           # bivariate Granger, min p over lags 1-4
+    gc = grangercausalitytests(np.column_stack([effect[a:b], cause[a:b]]), maxlag=4, verbose=False)
+    return float(min(gc[l][0]['ssr_ftest'][1] for l in gc))
+def _cond_gp(target, cause, ctrl, a, b): # cause->target CONDITIONAL on intensity (3-var VAR)
+    df3 = pd.DataFrame(np.column_stack([target[a:b], cause[a:b], ctrl[a:b]]), columns=['T', 'C', 'X'])
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        return float(_VAR(df3).fit(maxlags=4, ic='aic').test_causality('T', ['C'], kind='f').pvalue)
+
+cost_tests, base_keys, base_ps = {}, [], []
 for cv in COST:
     for tg in TARGETS:
+        k = f"{cv}->{tg}"
         try:
-            pair = np.column_stack([sd[tg][:end], sd[cv][:end]])  # [effect, cause]
-            gc = grangercausalitytests(pair, maxlag=4, verbose=False)
-            pmin = min(gc[l][0]['ssr_ftest'][1] for l in gc)
-            cost_tests[f"{cv}->{tg}"] = {"granger_p_min": round(float(pmin), 4), "drives": bool(pmin < 0.05)}
+            p0 = _gp(sd[tg], sd[cv], 0, end)
+            cost_tests[k] = {"granger_p": round(p0, 4),
+                             "cond_p_intensity": round(_cond_gp(sd[tg], sd[cv], intensity, 0, end), 4),
+                             "p_2023plus": round(_gp(sd[tg], sd[cv], sub0, end), 4)}
+            base_keys.append(k); base_ps.append(p0)
         except Exception as e:
-            cost_tests[f"{cv}->{tg}"] = {"error": str(e)[:80]}
-any_cost = any(v.get("drives") for v in cost_tests.values())
+            cost_tests[k] = {"error": str(e)[:80]}
+# Benjamini-Hochberg FDR across the 6 baseline tests
+rej, q, _, _ = multipletests(base_ps, alpha=0.05, method='fdr_bh')
+for k, qq, rj in zip(base_keys, q, rej):
+    cost_tests[k]["fdr_q"] = round(float(qq), 4); cost_tests[k]["fdr_sig"] = bool(rj)
+# ROBUST = survives FDR AND conditioning on intensity AND the 2023+ subperiod
+for k, v in cost_tests.items():
+    if "error" in v: continue
+    v["robust"] = bool(v.get("fdr_sig") and v.get("cond_p_intensity", 1) < 0.05 and v.get("p_2023plus", 1) < 0.05)
+robust = [k for k, v in cost_tests.items() if v.get("robust")]
+survives_intensity = [k for k, v in cost_tests.items() if v.get("fdr_sig") and v.get("cond_p_intensity", 1) < 0.05]
 cost_channel = {
-    "note": f"Granger p (min over lags 1-4) on signed-log1p weekly series; last {TRIM} weeks dropped "
-            "(casualty reporting lag). Deaths read from the SUSTAINS_DEATHS TKG predicate (forces:RU<-UCDP, "
-            "forces:UA<-UALosses, civilians:UA<-OHCHR). Strikes measured event-VOLUME; this measures human COST.",
+    "note": f"Granger min-p (lags 1-4) on signed-log1p weekly series, last {TRIM} weeks dropped (reporting lag). "
+            "Deaths = SUSTAINS_DEATHS TKG predicate (forces:UA<-UALosses real-dated; forces:RU<-UCDP, "
+            "civilians:UA<-OHCHR month-distributed). ROBUSTNESS: BH-FDR across 6 tests; cond_p_intensity = Granger "
+            "CONDITIONAL on weekly ATTACKS (operational-tempo control, the offensive confounder); p_2023plus drops "
+            "the 2022 war-onset spike. robust = passes all three.",
     "tests": cost_tests,
-    "verdict": ("SUGGESTIVE (not causal): human cost — Ukrainian military deaths (p≈.001–.004) and civilian "
-                "deaths (p≈.001) — Granger-PRECEDES Russian red-line/nuclear rhetoric, where strike-VOLUME did "
-                "not. Russian military deaths do NOT. So the decoupling is specifically about strike-volume, not "
-                "all war signals."
-                if any_cost else
-                "Human cost does NOT Granger-drive rhetoric either — the decoupling extends from strike-volume to cost."),
+    "robust_links": robust, "survives_intensity_control": survives_intensity,
+    "verdict": (("ROBUST: " + ", ".join(robust) + " survive FDR + conditioning on operational intensity + the 2023+ "
+                 "subperiod — human cost predicts RU escalatory rhetoric beyond what offensive-tempo explains, where "
+                 "strike-VOLUME does not. Still Granger (precedence), but no longer a naive confound artifact.")
+                if robust else
+                ("NOT ROBUST: the raw cost->rhetoric Granger links do NOT survive controlling for operational "
+                 "intensity and/or dropping 2022 — consistent with the common-driver confound (offensives raise "
+                 "casualties AND rhetoric). The decoupling holds for cost too once intensity is controlled.")),
     "caveats": [
-        "Granger = temporal precedence, NOT causation. The obvious confound: Russian OFFENSIVES jointly raise "
-        "Ukrainian casualties AND Russian escalatory rhetoric (common driver = operational intensity), which "
-        "would produce exactly this pattern without cost causing rhetoric.",
-        "DEATHS_UA uses REAL daily death dates (UALosses) — the strongest series. DEATHS_RU (UCDP) and "
-        "DEATHS_CIV (OHCHR) are MONTH-DISTRIBUTED to weeks, so their within-month autocorrelation can bias "
-        "Granger — treat those two as weaker than DEATHS_UA.",
-        "Not FDR-corrected across the 6 tests; not yet robustness-checked against the 2022 war-onset spike or "
-        "with an operational-intensity control. Hypothesis-generating, not a finished causal claim."]}
+        "Even 'robust' = Granger precedence conditional on ONE intensity proxy (ATTACKS), not proof of causation.",
+        "DEATHS_UA is real-dated (strongest); DEATHS_RU/CIV are month-distributed -> within-month autocorrelation "
+        "can inflate their significance; weight DEATHS_UA most.",
+        "Single intensity control + linear VAR; mechanism (why UA cost would move RU rhetoric) is not established."]}
 event_study["DEATHS_RU"]  = [int(x) for x in raw['DEATHS_RU'][nz:]]
 event_study["DEATHS_UA"]  = [int(x) for x in raw['DEATHS_UA'][nz:]]
 event_study["DEATHS_CIV"] = [int(x) for x in raw['DEATHS_CIV'][nz:]]
