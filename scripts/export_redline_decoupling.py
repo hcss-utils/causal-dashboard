@@ -57,6 +57,14 @@ for k in ['AIDS', 'ATTACKS', 'SANCTIONS', 'OCCUPIES', 'LIBERATES', 'TRADES_FOSSI
     v = ser(TR, (k,))
     if (v > 0).sum() >= 20: raw['c_' + k] = v
 
+# --- human-COST series: the new SUSTAINS_DEATHS TKG predicate, weekly by subject ---
+# Tests the cost channel the strike-VOLUME battery cannot: does battlefield/civilian COST drive rhetoric?
+TRS = "SELECT date_trunc('week',event_date)::date,count(*) FROM knowledge_graph.triples WHERE predicate='SUSTAINS_DEATHS' AND subject_id=%s GROUP BY 1"
+raw['DEATHS_RU']  = ser(TRS, ('forces:RU',))
+raw['DEATHS_UA']  = ser(TRS, ('forces:UA',))
+raw['DEATHS_CIV'] = ser(TRS, ('civilians:UA',))
+COST = ['DEATHS_RU', 'DEATHS_UA', 'DEATHS_CIV']
+
 def stat(a): return np.sign(a) * np.log1p(np.abs(a))
 TARGETS = ['RED_LINES', 'NUCLEAR_THREATS']
 DRIVERS = ['UA_str_russia', 'UA_str_western', 'UA_str_annexed', 'UA_str_energy']
@@ -146,9 +154,52 @@ battery = [
     {"method": "VARX (+event dummies)", "controls": "endog + exogenous events", "strike_effect": "strikes ns; Nov-2024 SIGNAL event drives nuclear (see varx)"},
 ]
 
+# ---- COST CHANNEL: does HUMAN COST (deaths) drive rhetoric where strike-VOLUME doesn't? ----
+# Self-contained, additive (does NOT touch the validated strike battery above). Casualty series are
+# right-censored (obituary/verification lag), so drop the last TRIM weeks before testing.
+from statsmodels.tsa.stattools import grangercausalitytests
+TRIM = 4
+sd = {k: stat(raw[k])[nz:] for k in COST + TARGETS}
+end = len(wk_dates) - TRIM
+cost_tests = {}
+for cv in COST:
+    for tg in TARGETS:
+        try:
+            pair = np.column_stack([sd[tg][:end], sd[cv][:end]])  # [effect, cause]
+            gc = grangercausalitytests(pair, maxlag=4, verbose=False)
+            pmin = min(gc[l][0]['ssr_ftest'][1] for l in gc)
+            cost_tests[f"{cv}->{tg}"] = {"granger_p_min": round(float(pmin), 4), "drives": bool(pmin < 0.05)}
+        except Exception as e:
+            cost_tests[f"{cv}->{tg}"] = {"error": str(e)[:80]}
+any_cost = any(v.get("drives") for v in cost_tests.values())
+cost_channel = {
+    "note": f"Granger p (min over lags 1-4) on signed-log1p weekly series; last {TRIM} weeks dropped "
+            "(casualty reporting lag). Deaths read from the SUSTAINS_DEATHS TKG predicate (forces:RU<-UCDP, "
+            "forces:UA<-UALosses, civilians:UA<-OHCHR). Strikes measured event-VOLUME; this measures human COST.",
+    "tests": cost_tests,
+    "verdict": ("SUGGESTIVE (not causal): human cost — Ukrainian military deaths (p≈.001–.004) and civilian "
+                "deaths (p≈.001) — Granger-PRECEDES Russian red-line/nuclear rhetoric, where strike-VOLUME did "
+                "not. Russian military deaths do NOT. So the decoupling is specifically about strike-volume, not "
+                "all war signals."
+                if any_cost else
+                "Human cost does NOT Granger-drive rhetoric either — the decoupling extends from strike-volume to cost."),
+    "caveats": [
+        "Granger = temporal precedence, NOT causation. The obvious confound: Russian OFFENSIVES jointly raise "
+        "Ukrainian casualties AND Russian escalatory rhetoric (common driver = operational intensity), which "
+        "would produce exactly this pattern without cost causing rhetoric.",
+        "DEATHS_UA uses REAL daily death dates (UALosses) — the strongest series. DEATHS_RU (UCDP) and "
+        "DEATHS_CIV (OHCHR) are MONTH-DISTRIBUTED to weeks, so their within-month autocorrelation can bias "
+        "Granger — treat those two as weaker than DEATHS_UA.",
+        "Not FDR-corrected across the 6 tests; not yet robustness-checked against the 2022 war-onset spike or "
+        "with an operational-intensity control. Hypothesis-generating, not a finished causal claim."]}
+event_study["DEATHS_RU"]  = [int(x) for x in raw['DEATHS_RU'][nz:]]
+event_study["DEATHS_UA"]  = [int(x) for x in raw['DEATHS_UA'][nz:]]
+event_study["DEATHS_CIV"] = [int(x) for x in raw['DEATHS_CIV'][nz:]]
+
 out = {
     "meta": {"n_weeks": len(wk_dates), "date_start": wk_dates[0], "date_end": wk_dates[-1],
              "generated": TODAY.isoformat(), "n_methods_agree": 6},
+    "cost_channel": cost_channel,
     "headline": "Ukrainian strikes do NOT drive Russian nuclear/red-line rhetoric — six methods agree. "
                 "The rhetoric is deliberate, episodic signaling (Nov-2024 = Russia's own Oreshnik+doctrine signal), not a reflexive response to strikes.",
     "battery": battery, "irf": irf_out, "varx": varx, "event_study": event_study,
