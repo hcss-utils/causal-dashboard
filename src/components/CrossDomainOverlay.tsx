@@ -97,16 +97,17 @@ export default function CrossDomainOverlay() {
           name: `RRLS (${totalRRLS})`,
           x: rrlsByMonth.map(r => r.month),
           y: rrlsByMonth.map(r => r.avgConf),
+          customdata: rrlsByMonth.map(r => r.count),
           marker: {
             size: rrlsByMonth.map(r => 8 + (r.count / maxCount) * 30),
             color: '#ff4444',
             opacity: rrlsByMonth.map(r => 0.4 + (r.avgConf / 10) * 0.6),
           },
-          text: rrlsByMonth.map(r => r.avgConf > 0 ? r.avgConf.toFixed(1) : ''),
+          text: rrlsByMonth.map(r => String(r.count)),
           textposition: 'middle center',
           textfont: { size: 9, color: '#fff' },
           yaxis: 'y2',
-          hovertemplate: '%{x}<br>RRLS: %{marker.size:.0f} statements<br>Avg confidence: %{y:.1f}/10<extra></extra>',
+          hovertemplate: '%{x}<br>RRLS: %{customdata} statements<br>Avg confidence: %{y:.1f}/10<extra></extra>',
         } as Plotly.Data);
       }
 
@@ -118,17 +119,18 @@ export default function CrossDomainOverlay() {
           name: `NTS (${totalNTS})`,
           x: ntsByMonth.map(r => r.month),
           y: ntsByMonth.map(r => r.avgConf),
+          customdata: ntsByMonth.map(r => r.count),
           marker: {
             size: ntsByMonth.map(r => 8 + (r.count / maxCount) * 25),
             color: '#dbad50',
             opacity: ntsByMonth.map(r => 0.4 + (r.avgConf / 10) * 0.6),
             symbol: 'diamond',
           },
-          text: ntsByMonth.map(r => r.avgConf > 0 ? r.avgConf.toFixed(1) : ''),
+          text: ntsByMonth.map(r => String(r.count)),
           textposition: 'middle center',
           textfont: { size: 8, color: '#000' },
           yaxis: 'y2',
-          hovertemplate: '%{x}<br>NTS: %{marker.size:.0f} statements<br>Avg confidence: %{y:.1f}/10<extra></extra>',
+          hovertemplate: '%{x}<br>NTS: %{customdata} statements<br>Avg confidence: %{y:.1f}/10<extra></extra>',
         } as Plotly.Data);
       }
     } else if (chartMode === 'dual_axis') {
