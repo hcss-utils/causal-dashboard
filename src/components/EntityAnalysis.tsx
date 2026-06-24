@@ -26,7 +26,10 @@ export default function EntityAnalysis() {
     <div className="tab-content">
       <h2>Entity-Level Analysis</h2>
       <p className="subtitle">
-        Top source-target entity pairs for rhetoric predicates. Shows which actors direct rhetoric at whom.
+        Top source→target entity pairs for rhetoric predicates — which side directs rhetoric at whom. Entities are
+        <strong> canonicalised to country / bloc level</strong>: all Russian officials and bodies (Putin, MFA, State
+        Duma, …) roll up to <strong>Russia</strong>, and duplicate ids (<code>country:USA</code> / <code>actor:united_states</code>,
+        <code>country:UKR</code> / <code>actor:kyiv_regime</code>) are merged, so dyads aren't split across variants.
       </p>
 
       <div className="controls">
