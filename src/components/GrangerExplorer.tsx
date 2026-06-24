@@ -23,14 +23,14 @@ export default function GrangerExplorer() {
   // Triggers: X → focusTarget
   const triggers = useMemo(() => {
     return granger
-      .filter(g => g.target === focusTarget && g.sig && !g.target.includes('_severity'))
+      .filter(g => g.target === focusTarget && g.fdr_sig && !g.target.includes('_severity'))
       .sort((a, b) => a.p_value - b.p_value);
   }, [granger, focusTarget]);
 
   // Effects: focusTarget → X
   const effects = useMemo(() => {
     return granger
-      .filter(g => g.source === focusTarget && g.sig && !g.target.includes('_severity'))
+      .filter(g => g.source === focusTarget && g.fdr_sig && !g.target.includes('_severity'))
       .sort((a, b) => a.p_value - b.p_value);
   }, [granger, focusTarget]);
 
@@ -44,7 +44,7 @@ export default function GrangerExplorer() {
   // Severity-weighted triggers
   const severityTriggers = useMemo(() => {
     return granger
-      .filter(g => g.target === `${focusTarget}_severity` && g.sig)
+      .filter(g => g.target === `${focusTarget}_severity` && g.fdr_sig)
       .sort((a, b) => a.p_value - b.p_value);
   }, [granger, focusTarget]);
 
@@ -53,7 +53,17 @@ export default function GrangerExplorer() {
       <h2>Granger Causality Explorer</h2>
       <p className="subtitle">
         Granger tests whether past values of X help predict future values of Y beyond Y's own history (max lag = 4 weeks).
+        Edges shown survive <strong>Benjamini-Hochberg FDR (q=0.05)</strong> across all 110 pairwise tests — raw p&lt;0.05
+        over-claims at this scale. Granger is a screen, not proof of causation; the controlled test is the Strike-Decoupling tab.
       </p>
+      <Takeaway variant="warning">
+        These are <strong>pairwise</strong> (bivariate) screens — FDR-corrected, but <strong>not</strong> controlled for the rest of the war.
+        A high-F edge here — e.g. <strong>AIDS</strong> or <strong>ATTACKS</strong> → red-lines / nuclear — is <strong>not</strong> a robust effect:
+        most vanish once you condition on operational tempo and the full control set. The robust verdict lives in the{' '}
+        <strong>Strike Decoupling</strong> tab (FAVAR / LASSO / Ridge / VARX + FDR), where the pairwise battery's own row reads
+        “nothing survives,” and both strike volume and the war's human cost come out decoupled from the rhetoric. Read this as
+        “what to investigate,” not “what's proven.”
+      </Takeaway>
 
       <div className="controls">
         <div className="toggle-row">
