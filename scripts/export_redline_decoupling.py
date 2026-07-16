@@ -18,12 +18,33 @@ from sklearn.decomposition import PCA
 from sklearn.linear_model import LassoCV, RidgeCV
 from sklearn.preprocessing import StandardScaler
 
+# --- DB credentials: load from environment, never hardcode secrets ---
+def _load_rubase_env():
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    for p in (os.environ.get("RUBASE_CREDENTIALS"),
+              "/root/.config/rubase/credentials.env",
+              os.path.expanduser("~/.config/rubase/credentials.env"),
+              "/mnt/g/My Drive/SYSTEM_CREDENTIALS.env"):
+        if p and __import__("os").path.exists(p):
+            load_dotenv(p); break
+_load_rubase_env()
+
+def _dbenv(*names):
+    for n in names:
+        v = os.environ.get(n)
+        if v:
+            return v
+    raise RuntimeError("missing DB credential env var (any of: %s)" % (names,))
+
 OUT = os.environ.get("REDLINE_OUT", "/home/stephan/src/causal-dashboard/public/data")
-DB = dict(host=os.environ.get("TKG_DB_HOST", "138.201.62.161"),
-          port=int(os.environ.get("TKG_DB_PORT", "5432")),
-          dbname=os.environ.get("TKG_DB_NAME", "war_datasets"),
-          user=os.environ.get("TKG_DB_USER", "postgres"),
-          password=os.environ.get("TKG_DB_PASSWORD", "***DB_PASSWORD_REDACTED***"))
+DB = dict(host=_dbenv("TKG_DB_HOST", "PG_WARDATASETS_HOST"),
+          port=int(_dbenv("TKG_DB_PORT", "PG_WARDATASETS_PORT")),
+          dbname=_dbenv("TKG_DB_NAME", "PG_WARDATASETS_DATABASE"),
+          user=_dbenv("TKG_DB_USER", "PG_WARDATASETS_USER"),
+          password=_dbenv("TKG_DB_PASSWORD", "PG_WARDATASETS_PASSWORD"))
 
 conn = psycopg2.connect(**DB); cur = conn.cursor()
 from datetime import date, timedelta
