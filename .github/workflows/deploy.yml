@@ -55,6 +55,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
+          user_name: 'github-actions[bot]'
+          user_email: '41898282+github-actions[bot]@users.noreply.github.com'
 
       - name: Build for sdspieg/russian_redlines-causal-dashboard (legacy URL mirror)
         if: ${{ env.SDSPIEG_PAGES_PAT != '' }}
@@ -73,3 +75,5 @@ jobs:
           external_repository: sdspieg/russian_redlines-causal-dashboard
           publish_branch: gh-pages
           publish_dir: ./dist
+          user_name: 'github-actions[bot]'
+          user_email: '41898282+github-actions[bot]@users.noreply.github.com'
