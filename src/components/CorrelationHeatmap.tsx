@@ -15,10 +15,11 @@ export default function CorrelationHeatmap() {
 
   return (
     <div className="tab-content">
-      <h2>Lagged Correlation Matrix</h2>
+      <h2>Contemporaneous Correlation Matrix</h2>
       <p className="subtitle">
-        Pearson correlation between predicate X at week t-1 and predicate Y at week t.
-        Values near 1 indicate strong co-movement with a 1-week lead.
+        Pearson correlation between predicate X and predicate Y in the <strong>same week</strong> (lag&nbsp;0) — descriptive
+        co-movement only, <strong>not</strong> lead/lag. For lead/lag see the Cross-Correlation tab; for direction, the Granger and
+        Strike-Decoupling tabs.
       </p>
 
       <div className="chart-row">
@@ -41,7 +42,7 @@ export default function CorrelationHeatmap() {
               text: data.matrix.map(row => row.map(v => v.toFixed(3))),
               texttemplate: '%{text}',
               textfont: { size: 9, color: '#e8edf3' },
-              hovertemplate: '%{y} [t-1] → %{x} [t]<br>Correlation: %{z:.3f}<extra></extra>',
+              hovertemplate: '%{y} ↔ %{x} (same week)<br>Correlation: %{z:.3f}<extra></extra>',
             }]}
             layout={{
               paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
@@ -80,10 +81,11 @@ export default function CorrelationHeatmap() {
             }
             return (
               <Takeaway>
-                Strongest lagged pair overall: <strong>{best.src} [t-1] → {best.tgt} [t]</strong> with r = {best.r.toFixed(3)}.
-                {bestIn.src && <> The strongest <em>event → rhetoric</em> lagged correlation is <strong>{bestIn.src} → {bestIn.tgt}</strong> at r = {bestIn.r.toFixed(3)}.</>}
-                {' '}Read the matrix as: row [t-1] <em>leads</em> column [t] by one week. Positive values in the event-→-rhetoric quadrants
-                support the "rhetoric is reactive" reading visible in the Granger tab.
+                Strongest contemporaneous pair overall: <strong>{best.src} ↔ {best.tgt}</strong> with r = {best.r.toFixed(3)}.
+                {bestIn.src && <> The strongest <em>event ↔ rhetoric</em> same-week correlation is <strong>{bestIn.src} ↔ {bestIn.tgt}</strong> at r = {bestIn.r.toFixed(3)}.</>}
+                {' '}This is <strong>same-week co-movement</strong>, not lead/lag and not causation — events and rhetoric rising in the
+                same weeks says nothing about which moves first. Lead/lag lives in the Cross-Correlation tab; the controlled causal
+                test is the Strike-Decoupling battery, which finds no robust strike → rhetoric effect.
               </Takeaway>
             );
           })()}

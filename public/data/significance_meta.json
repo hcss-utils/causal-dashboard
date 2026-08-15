@@ -1,8 +1,8 @@
 {
  "n_tests": 110,
  "bonferroni_threshold": 0.000455,
- "fdr_cutoff": 0.0036,
- "n_raw_05": 23,
- "n_fdr": 9,
- "n_bonf": 5
+ "fdr_cutoff": 0.0052,
+ "n_raw_05": 32,
+ "n_fdr": 14,
+ "n_bonf": 7
 }

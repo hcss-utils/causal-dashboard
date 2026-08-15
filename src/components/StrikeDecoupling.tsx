@@ -10,11 +10,26 @@ interface EventStudy {
   UA_strikes_all: number[]; UA_strikes_deep: number[]; UA_strikes_western: number[];
   events: { date: string; label: string }[];
 }
+interface Tier1 {
+  favar_full_controls: { p?: number; survives?: boolean; error?: string };
+  reverse_causality: { forward_p: number; reverse_p: number; simultaneous: boolean };
+  specification_curve: { n_specs: number; frac_p_lt_05: number; median_p: number };
+  out_of_sample: { improvement_pct: number; deaths_help: boolean };
+  hurdles_passed: string;
+}
+interface CostChannel {
+  tests: Record<string, { granger_p?: number; fdr_q?: number; cond_p_intensity?: number; p_2023plus?: number; robust?: boolean; error?: string }>;
+  robust_links: string[];
+  tier1_DEATHS_UA_to_NUCLEAR: Tier1;
+  tier1_DEATHS_UA_to_NUCLEAR_PURIFIED: Tier1;
+  purification: { outcome: string; impure_hurdles: string; purified_hurdles: string; verdict: string };
+}
 interface RedlineData {
   meta: { n_weeks: number; date_start: string; date_end: string; generated: string; n_methods_agree: number };
   headline: string; battery: BatteryRow[]; irf: IRFPanel[];
   varx: Record<string, { coef: number; p: number } | string>;
   event_study: EventStudy; favar_explained_var: number; favar_min_p: number;
+  cost_channel?: CostChannel;
 }
 
 const RED = '#d35f5f', GOLD = '#dbad50', LB = '#82a0bc', GREY = '#a9abb8', GREEN = '#76c893';
@@ -154,6 +169,49 @@ export default function StrikeDecoupling() {
           </Takeaway>
         </div>
       </div>
+
+      {d.cost_channel && (() => {
+        const cc = d.cost_channel!;
+        const imp = cc.tier1_DEATHS_UA_to_NUCLEAR, pur = cc.tier1_DEATHS_UA_to_NUCLEAR_PURIFIED;
+        return (
+          <div className="card" style={{ marginTop: 20 }}>
+            <h4>Beyond strikes: does the war's human COST drive the rhetoric? (Also no — and a case study in catching a false positive)</h4>
+            <p style={{ fontSize: 13, color: LB }}>
+              The battery above tests strike <em>volume</em>. We then added the war's human <strong>cost</strong> to the
+              same temporal knowledge graph — a <code>SUSTAINS_DEATHS</code> predicate (Ukrainian military deaths from
+              UALosses' real-dated obituaries, Russian deaths from UCDP, civilians from OHCHR) — and ran the identical
+              machinery. Of six cost→rhetoric links, robustness (FDR + intensity control + dropping 2022) left exactly
+              one: <strong>Ukrainian military deaths → Russian nuclear threats</strong>. It then passed a full four-test
+              rigor battery <strong>{imp.hurdles_passed}</strong> (full-control FAVAR, no reverse-causality, 128/128
+              specifications, out-of-sample forecast). Suggestive of a real cost→signal channel.
+            </p>
+            <p style={{ fontSize: 13, color: LB }}>
+              But reading the <em>actual statements</em> that followed the deadliest weeks deflated it twice over: they
+              are overwhelmingly <strong>deterrence aimed at the West</strong> (“don't intervene”), not reactions to
+              Ukrainian losses; and the <code>NUCLEAR_THREATS</code> measure was ~⅓ <strong>third parties</strong>
+              (Ukrainian and Western officials <em>warning the world</em> after heavy casualties). Purifying the outcome
+              to genuine Russian-<strong>state</strong> signaling and re-running the battery collapsed it from{' '}
+              <strong>{cc.purification.impure_hurdles}</strong> to <strong style={{ color: RED }}>{cc.purification.purified_hurdles}</strong>:
+            </p>
+            <table className="data-table" style={{ fontSize: 12, marginBottom: 10 }}>
+              <thead><tr><th>Tier-1 test</th><th>impure (all nuclear talk)</th><th>purified (Russian state only)</th></tr></thead>
+              <tbody>
+                <tr><td>FAVAR full-control</td><td style={{ color: GREEN }}>p={imp.favar_full_controls.p} ✓</td><td style={{ color: RED }}>p={pur.favar_full_controls.p} ✗ fails</td></tr>
+                <tr><td>Reverse causality</td><td>one-way (rev p={imp.reverse_causality.reverse_p})</td><td style={{ color: RED }}>simultaneous (rev p={pur.reverse_causality.reverse_p})</td></tr>
+                <tr><td>Specification curve</td><td style={{ color: GREEN }}>{Math.round(imp.specification_curve.frac_p_lt_05 * 100)}% sig</td><td>{Math.round(pur.specification_curve.frac_p_lt_05 * 100)}% sig</td></tr>
+                <tr><td>Hurdles passed</td><td style={{ color: GREEN }}>{imp.hurdles_passed}</td><td style={{ color: RED }}>{pur.hurdles_passed}</td></tr>
+              </tbody>
+            </table>
+            <Takeaway variant="success">
+              Properly measured, Russian state nuclear signaling is <strong>not</strong> cleanly driven by Ukrainian
+              deaths — it's bidirectional and fails the full controls. The apparent link rode on measurement impurity +
+              confounding. So the decoupling <strong>broadens</strong>: neither strike volume <em>nor</em> human cost
+              drives the rhetoric. And the chain that killed it — read the statements → purify the measure → re-test —
+              is the difference between a defensible finding and a confound dressed as a discovery.
+            </Takeaway>
+          </div>
+        );
+      })()}
 
       <p className="subtitle" style={{ fontSize: 12, color: GREY, marginTop: 8 }}>
         Generated {d.meta.generated} from the live war_datasets DB. Method: <code>scripts/export_redline_decoupling.py</code>.
